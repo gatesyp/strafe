@@ -153,7 +153,7 @@ Each of these is verifiable with a single grep over `Sources/`.
   caches. Its own code writes two `UserDefaults` values: `transitionSpeed`, an integer
   0–2 recording which **Transition speed** preset you picked in the menu
   (`TransitionSpeed`, `Sources/strafe/TransitionSpeed.swift` line 101); and
-  `spaceHotkeysEnabled`, a bool recording whether the Ctrl+Option+Left/Right
+  `spaceHotkeysEnabled`, a bool recording whether the Ctrl+Left/Right
   **Space-switch hotkeys** toggle is on (`HotkeyManager`,
   `Sources/strafe/HotkeyManager.swift`). Neither has any effect on what the
   gesture tap sees — the first changes the shape of the gesture strafe

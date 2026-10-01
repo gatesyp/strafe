@@ -112,7 +112,7 @@ func runCLI(_ args: [String], engine: GestureSwitchEngine) -> Int32 {
           strafe switch left|right    switch space once and exit
           strafe status               print accessibility / tap status
           strafe speed [preset]       show or set the swipe transition speed
-          strafe hotkeys [on|off]     show or set the ctrl+opt+arrow hotkeys
+          strafe hotkeys [on|off]     show or set the ctrl+arrow hotkeys
 
         """.utf8))
         return 2

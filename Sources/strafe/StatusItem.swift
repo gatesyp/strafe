@@ -18,7 +18,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     )
     private var speedItems: [NSMenuItem] = []
     private let hotkeysItem = NSMenuItem(
-        title: "Space-switch hotkeys (⌃⌥←/→)", action: #selector(toggleHotkeys), keyEquivalent: ""
+        title: "Space-switch hotkeys (⌃←/→)", action: #selector(toggleHotkeys), keyEquivalent: ""
     )
     private let accessibilityItem = NSMenuItem(
         title: "Accessibility granted: —", action: nil, keyEquivalent: ""
@@ -149,7 +149,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         refresh()
     }
 
-    /// Toggle the Ctrl+Option+Left/Right global hotkeys, independent of the
+    /// Toggle the Ctrl+Left/Right global hotkeys, independent of the
     /// gesture tap (`toggleEnabled`). This is the mechanism that can conflict
     /// with third-party window-tiling shortcuts bound to the same chord.
     @objc private func toggleHotkeys() {
