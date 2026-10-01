@@ -1,5 +1,13 @@
 # strafe
 
+> **This fork** (gatesyp/strafe) changes two things from
+> [rileycx/strafe](https://github.com/rileycx/strafe). The Space-switch hotkeys
+> are Ctrl+Left/Right instead of Ctrl+Option+Left/Right. Activating an app on
+> another Space (Cmd-Tab, AltTab, the Dock) jumps there instantly instead of
+> sliding. To set up a new Mac, install the Command Line Tools for Xcode 26.4
+> or later (Swift 6.3), then run `./Scripts/setup-mac.sh` and follow its last
+> step.
+
 **v0.1.2 adds menu-bar hiding, optional Space-switch hotkeys, and better Mission
 Control detection on macOS 27.** It includes the Space-switching and workspace
 boundary fixes from v0.1.1.
