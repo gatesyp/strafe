@@ -158,10 +158,7 @@ final class GestureSwitchEngine: SwitchEngine, @unchecked Sendable {
         // Read live topology once. If CGS symbols are unavailable we can't do
         // bounds/prediction bookkeeping — fall back to posting unconditionally.
         if let info = spaceInfo() {
-            let displayID = withUnsafeBytes(of: info.displayID) { raw -> String in
-                let ptr = raw.baseAddress!.assumingMemoryBound(to: CChar.self)
-                return String(cString: ptr)
-            }
+            let displayID = Self.displayID(info)
 
             lock.lock()
             let current = predictions[displayID] ?? info.currentIndex
@@ -189,6 +186,26 @@ final class GestureSwitchEngine: SwitchEngine, @unchecked Sendable {
             guard post(direction, speed: transitionSpeed) else {
                 throw SwitchEngineError.postFailed
             }
+        }
+    }
+
+    /// Step one Space at a time until `target.currentIndex` is reached on the
+    /// display under the cursor. Measures from the predicted index, so an
+    /// activation that lands mid-switch does not double the move.
+    func jump(to target: StrafeInfo) {
+        guard let info = spaceInfo(), Self.displayID(info) == Self.displayID(target) else { return }
+        lock.lock()
+        let current = predictions[Self.displayID(info)] ?? info.currentIndex
+        lock.unlock()
+        let delta = Int(target.currentIndex) - Int(current)
+        for _ in 0..<abs(delta) {
+            do { try switchSpace(delta > 0 ? .right : .left) } catch { return }
+        }
+    }
+
+    private static func displayID(_ info: StrafeInfo) -> String {
+        withUnsafeBytes(of: info.displayID) { raw in
+            String(cString: raw.baseAddress!.assumingMemoryBound(to: CChar.self))
         }
     }
 

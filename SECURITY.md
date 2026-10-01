@@ -98,6 +98,17 @@ On macOS 27 and later, a Dock-owned window at layer 20 is enough to detect
 Mission Control; older systems keep the existing layer-18 requirement. This
 uses the same window metadata and adds no permissions or data collection.
 
+**Fork addition: follow app activation.** When macOS's "switch to a Space with
+open windows for the application" setting is off (`com.apple.dock`
+`workspaces-auto-swoosh`, which strafe reads but never writes), strafe listens
+for `NSWorkspace.didActivateApplicationNotification`. For the activated app it
+asks Accessibility for the focused window's ID (`strafe_focused_window`, via the
+private `_AXUIElementGetWindow`) and asks CGS which Space holds that window
+(`strafe_get_window_space`, via the private `CGSCopySpacesForWindows`). If the
+window is on another Space, strafe posts the same instant switch gesture once
+per Space in between. It reads no window titles or contents, and stores
+nothing. It needs no permission beyond the existing Accessibility grant.
+
 ---
 
 ## What strafe never does

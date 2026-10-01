@@ -107,6 +107,15 @@ uint64_t strafe_tap_event_mask(void);
 // True when App Exposé or Mission Control is up (Dock windows at layers 18/20).
 bool strafe_is_expose_active(void);
 
+// --- Follow app activation ------------------------------------------------
+// CGWindowID of `pid`'s focused window via Accessibility, or 0.
+uint32_t strafe_focused_window(pid_t pid);
+
+// Fill `outInfo` for the Space holding `windowID`: its display, that display's
+// Space count, and the window's Space index in `currentIndex`. Returns false
+// when the window is not found or is already on its display's active Space.
+bool strafe_get_window_space(uint32_t windowID, StrafeInfo *outInfo);
+
 #ifdef __cplusplus
 }
 #endif

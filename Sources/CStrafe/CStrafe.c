@@ -57,6 +57,8 @@ extern CFArrayRef  CGSCopyManagedDisplaySpaces(CGSConnectionID connection, CFStr
 extern CFStringRef CGSCopyActiveMenuBarDisplayIdentifier(CGSConnectionID connection) __attribute__((weak_import));
 extern CGSConnectionID CGSMainConnectionID(void) __attribute__((weak_import));
 extern CGSSpaceID  CGSGetActiveSpace(CGSConnectionID connection) __attribute__((weak_import));
+extern CFArrayRef  CGSCopySpacesForWindows(CGSConnectionID connection, int mask, CFArrayRef windowIDs) __attribute__((weak_import));
+extern AXError     _AXUIElementGetWindow(AXUIElementRef element, CGWindowID *outWindowID) __attribute__((weak_import));
 
 bool strafe_cgs_available(void) {
     return (&CGSMainConnectionID != NULL) &&
@@ -371,4 +373,80 @@ bool strafe_is_expose_active(void) {
         if (layer20Count > 0) { return true; }
     }
     return false;
+}
+
+// --- Follow app activation -------------------------------------------------
+uint32_t strafe_focused_window(pid_t pid) {
+    if (&_AXUIElementGetWindow == NULL) { return 0; }
+    AXUIElementRef app = AXUIElementCreateApplication(pid);
+    if (!app) { return 0; }
+    // A hung app must not stall the main run loop the event tap lives on.
+    AXUIElementSetMessagingTimeout(app, 0.25f);
+    CFTypeRef window = NULL;
+    AXError err = AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute, &window);
+    CFRelease(app);
+    if (err != kAXErrorSuccess || !window) { return 0; }
+    CGWindowID wid = 0;
+    if (_AXUIElementGetWindow((AXUIElementRef)window, &wid) != kAXErrorSuccess) { wid = 0; }
+    CFRelease(window);
+    return wid;
+}
+
+static bool space_ids_contain(CFArrayRef ids, CGSSpaceID sid) {
+    for (CFIndex i = 0; i < CFArrayGetCount(ids); i++) {
+        CGSSpaceID candidate = 0;
+        CFNumberGetValue((CFNumberRef)CFArrayGetValueAtIndex(ids, i), kCFNumberSInt64Type, &candidate);
+        if (candidate == sid) { return true; }
+    }
+    return false;
+}
+
+static CGSSpaceID space_dict_id(CFDictionaryRef space) {
+    CGSSpaceID sid = 0;
+    CFNumberRef num = space ? (CFNumberRef)CFDictionaryGetValue(space, CFSTR("id64")) : NULL;
+    if (num) { CFNumberGetValue(num, kCFNumberSInt64Type, &sid); }
+    return sid;
+}
+
+bool strafe_get_window_space(uint32_t windowID, StrafeInfo *outInfo) {
+    if (!outInfo || windowID == 0 || !strafe_cgs_available() || &CGSCopySpacesForWindows == NULL) {
+        return false;
+    }
+    CGSConnectionID conn = CGSMainConnectionID();
+
+    int64_t wid64 = windowID;
+    CFNumberRef widNum = CFNumberCreate(NULL, kCFNumberSInt64Type, &wid64);
+    CFArrayRef wids = CFArrayCreate(NULL, (const void **)&widNum, 1, &kCFTypeArrayCallBacks);
+    CFRelease(widNum);
+    // Mask 7: current, other, and full-screen Spaces.
+    CFArrayRef windowSpaces = CGSCopySpacesForWindows(conn, 7, wids);
+    CFRelease(wids);
+    if (!windowSpaces) { return false; }
+
+    CFArrayRef displays = CGSCopyManagedDisplaySpaces(conn, NULL);
+    bool found = false;
+    for (CFIndex d = 0; displays && !found && d < CFArrayGetCount(displays); d++) {
+        CFDictionaryRef display = (CFDictionaryRef)CFArrayGetValueAtIndex(displays, d);
+        CFArrayRef spaces = (CFArrayRef)CFDictionaryGetValue(display, CFSTR("Spaces"));
+        if (!spaces) { continue; }
+        CGSSpaceID current = space_dict_id((CFDictionaryRef)CFDictionaryGetValue(display, CFSTR("Current Space")));
+        if (space_ids_contain(windowSpaces, current)) { break; }
+        for (CFIndex s = 0; s < CFArrayGetCount(spaces); s++) {
+            if (!space_ids_contain(windowSpaces, space_dict_id((CFDictionaryRef)CFArrayGetValueAtIndex(spaces, s)))) {
+                continue;
+            }
+            memset(outInfo, 0, sizeof(*outInfo));
+            outInfo->spaceCount = (unsigned int)CFArrayGetCount(spaces);
+            outInfo->currentIndex = (unsigned int)s;
+            CFStringRef ident = (CFStringRef)CFDictionaryGetValue(display, CFSTR("Display Identifier"));
+            if (ident) {
+                CFStringGetCString(ident, outInfo->displayID, sizeof(outInfo->displayID), kCFStringEncodingUTF8);
+            }
+            found = true;
+            break;
+        }
+    }
+    if (displays) { CFRelease(displays); }
+    CFRelease(windowSpaces);
+    return found;
 }

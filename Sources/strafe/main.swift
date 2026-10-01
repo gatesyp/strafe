@@ -1,4 +1,5 @@
 import AppKit
+import CStrafe
 
 // MARK: - Entry point
 //
@@ -165,6 +166,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             queue: .main
         ) { [engine] _ in
             engine.resetPredictions()
+        }
+
+        // With macOS's "switch to a Space with open windows for the application"
+        // turned off, activating an app (Cmd-Tab, AltTab, Dock) leaves you on
+        // the current Space. Jump to its focused window's Space instantly.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [engine, interceptor] note in
+            guard let pid = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
+                .processIdentifier else { return }
+            MainActor.assumeIsolated {
+                guard interceptor?.overrideEnabled == true,
+                      UserDefaults(suiteName: "com.apple.dock")?
+                          .object(forKey: "workspaces-auto-swoosh") as? Bool == false
+                else { return }
+                var target = StrafeInfo()
+                guard strafe_get_window_space(strafe_focused_window(pid), &target) else { return }
+                engine.jump(to: target)
+            }
         }
 
         interceptor.start()
